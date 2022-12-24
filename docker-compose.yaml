@@ -1,0 +1,8 @@
+  azure-vote-front:
+    image: microsoft/azure-vote-front:cosmosdb
+    container_name: azure-vote-front
+    environment:
+      COSMOS_DB_ENDPOINT: <update>
+      COSMOS_DB_MASTERKEY: <update>
+    ports:
+        - "8080:80"

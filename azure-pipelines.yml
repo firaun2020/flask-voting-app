@@ -1,0 +1,64 @@
+trigger:
+- main
+
+pool:
+  name: titan-ubuntu-pool
+
+# Declare variables for the project
+
+variables:
+  azureServiceConnection: 'alwayson-e2e-serviceconnection'
+  azureContainerRegistry: '{"loginServer":"sandboxwalwil.azurecr.io", "id" : "xx"}'
+
+# Stage 1 - Build Application
+
+#steps:
+#- task: ExtractFiles@1
+#  displayName: 'Extract Files'
+#  inputs:
+#    archiveFilePatterns: '*.zip'
+#    destinationFolder: '$(Build.SourcesDirectory)'
+#    cleanDestinationFolder: false
+
+# Stage 2 - Build Docker Container
+steps:
+  
+- task: Docker@2
+  displayName: "Login to ACR"
+  inputs:
+    command: login
+    containerRegistry: titan_acr_connection
+
+- task: Docker@2
+  displayName: "Build And Push"
+  inputs:
+    command: buildAndPush
+    containerRegistry: titan_acr_connection
+    repository: flask-voting-app
+    tags: |
+      $(Build.BuildNumber)
+      latest
+ 
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+    Contents: manifest.yaml
+    TargetFolder: '$(build.artifactstagingdirectory)'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Pipeline Artifact'
+  inputs:
+    targetPath: '$(build.artifactstagingdirectory)'
+    artifact: drop
+
+# Stage 5 - Push docker image to ACR
+
+- task: KubernetesManifest@0
+  displayName: deploy
+  inputs:
+    kubernetesServiceConnection: akspublish
+    namespace: default
+    strategy: none #canary
+    manifests: manifest.yaml
+    containers: manifest.yaml
+    imagePullSecrets: '$(Parameters.imagePullSecrets)'

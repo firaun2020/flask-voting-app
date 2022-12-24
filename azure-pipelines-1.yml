@@ -1,0 +1,76 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  name: titan-ubuntu-pool
+
+variables:
+- name: image-name 
+  value: titanfad5globalcr.azurecr.io/flask:latest
+- group: e2e-env-vg
+- name: Local_COSMOS_DB_ENDPOINT
+  value: $[variables.COSMOS_DB_ENDPOINT]
+- name: Local_COSMOS_DB_MASTERKEY
+  value: $[variables.COSMOS_DB_MASTERKEY]
+  
+
+steps:
+- script: echo $(Local_COSMOS_DB_ENDPOINT)
+  displayName: 'Run a one-line script'
+
+- script: |
+    echo Add other tasks to build, test, and deploy your project.
+    echo See https://aka.ms/yaml
+  displayName: 'Run a multi-line script'
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'titan_acr_connection'
+    repository: 'flask'
+    command: 'build'
+    Dockerfile: 'azure-vote/Dockerfile'
+    tags: 'latest'
+
+- task: Docker@2
+  inputs:
+    containerRegistry: 'titan_acr_connection'
+    repository: 'flask'
+    command: 'push'
+    tags: 'latest'
+
+- task: replacetokens@5
+  inputs:
+    targetFiles: 'azure-vote-cosmosdb.yaml'
+    encoding: 'auto'
+    tokenPattern: 'rm'
+    writeBOM: true
+    actionOnMissing: 'warn'
+    keepToken: false
+    actionOnNoFiles: 'warn'
+    enableTransforms: false
+    enableRecursion: false
+    useLegacyPattern: false
+    enableTelemetry: true'
+
+- task: Kubernetes@1
+  inputs:
+    connectionType: 'Azure Resource Manager'
+    azureSubscriptionEndpoint: 'alwayson-e2e-serviceconnection'
+    azureResourceGroup: 'titanfad5-stamp-northeurope-rg'
+    kubernetesCluster: 'titanfad5-northeuro-aks'
+    command: 'apply'
+    arguments: '-f azure-vote-cosmosdb.yaml'
+
+# - task: Kubernetes@1
+#   inputs:
+#     connectionType: 'Azure Resource Manager'
+#     azureSubscriptionEndpoint: 'titan_pilot_service_connectio'
+#     azureResourceGroup: 'titanfad5-stamp-northeurope-rg'
+#     kubernetesCluster: 'titanfad5-northeuro-aks'
+#     command: 'apply'
+#     arguments: '-f app-ingress-route.yaml'   

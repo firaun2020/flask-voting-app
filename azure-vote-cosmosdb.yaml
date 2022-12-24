@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: azure-vote-front
+spec:
+  replicas: 1
+  selector:
+      matchLabels:
+        app: azure-vote-front
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        app: azure-vote-front
+    spec:
+      containers:
+      - name: azure-vote-front
+        image: __image-name__
+        #image: titanfad5globalcr.azurecr.io/flask:latest
+        #image: nginx
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 250m
+          limits:
+            cpu: 500m
+        env:
+        - name: COSMOS_DB_ENDPOINT
+          value: __Local_COSMOS_DB_ENDPOINT__
+        - name: COSMOS_DB_MASTERKEY
+          value: __Local_COSMOS_DB_MASTERKEY__
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: azure-vote-front
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+  selector:
+    app: azure-vote-front
